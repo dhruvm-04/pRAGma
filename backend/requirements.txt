@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pypdf
+fastembed
+numpy
+requests
+python-dotenv
+python-multipart
