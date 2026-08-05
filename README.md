@@ -1,10 +1,10 @@
-# pRAGma - Ask Your PDF
+# pRAGma
 
-A minimal **retrieval-augmented generation (RAG)** app: upload any and chat with it.
+A minimal **retrieval-augmented generation (RAG)** app: upload any document and chat with it.
 Every answer shows **exactly which chunks it read** and a **latency + cost log**
 making grounding and reliability visible instead of assumed.
 
-Built small as PoC with a React component
+Built small as PoC with a single React component
 
 ## What it does
 
@@ -48,7 +48,29 @@ The UI then shows, for each answer:
 
 Prerequisites: **Python 3.11+** and **Node 18+**.
 
-### 1. Backend
+### Run everything on port 8000
+
+Install the backend and frontend dependencies as described below, then build the
+frontend once:
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+Start FastAPI:
+
+```bash
+cd backend
+.\.venv\Scripts\python -m uvicorn app:app --reload --port 8000
+```
+
+Open **http://localhost:8000** for the UI and
+**http://localhost:8000/docs** for the FastAPI documentation. Run `npm run build`
+again whenever you change the frontend.
+
+### Backend setup
 
 ```bash
 cd backend
@@ -71,7 +93,7 @@ Run it:
 
 API docs will be at http://localhost:8000/docs.
 
-### 2. Frontend
+### Frontend development (optional)
 
 ```bash
 cd frontend
