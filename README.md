@@ -48,31 +48,9 @@ The UI then shows, for each answer:
 
 Prerequisites: **Python 3.11+** and **Node 18+**.
 
-### Run everything on port 8000
+### 1. Set up the backend
 
-Install the backend and frontend dependencies as described below, then build the
-frontend once:
-
-```bash
-cd frontend
-npm install
-npm run build
-```
-
-Start FastAPI:
-
-```bash
-cd backend
-.\.venv\Scripts\python -m uvicorn app:app --reload --port 8000
-```
-
-Open **http://localhost:8000** for the UI and
-**http://localhost:8000/docs** for the FastAPI documentation. Run `npm run build`
-again whenever you change the frontend.
-
-### Backend setup
-
-```bash
+```powershell
 cd backend
 python -m venv .venv
 .\.venv\Scripts\python -m pip install -r requirements.txt
@@ -80,28 +58,43 @@ python -m venv .venv
 
 Paste API key from Groq, then:
 
-```bash
-Copy-Item .env.example .env          # PowerShell
-# edit .env -> GROQ_API_KEY=API_key
+```
+.env -> GROQ_API_KEY=API_key, GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
-Run it:
+### 2. Build the frontend
 
-```bash
+```powershell
+cd ..\frontend
+npm ci
+npm run build
+```
+
+The build is written to `frontend/dist`, which FastAPI serves as the UI.
+
+### 3. Run the app
+
+```powershell
+cd ..\backend
 .\.venv\Scripts\python -m uvicorn app:app --reload --port 8000
 ```
 
-API docs will be at http://localhost:8000/docs.
+Open **http://localhost:8000** for the UI and
+**http://localhost:8000/docs** for FastAPI documentation.
+
+After editing the frontend, run `npm run build` again before reloading the UI
+served on port 8000.
 
 ### Frontend development (optional)
 
-```bash
+```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-Open **http://localhost:5173**, upload a PDF and start asking questions.
+Open **http://localhost:5173** for Vite live reload. Keep FastAPI running on
+port 8000 in a second terminal; Vite proxies the API requests to it.
 
 
 ## Usage
