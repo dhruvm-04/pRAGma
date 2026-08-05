@@ -6,6 +6,12 @@
   },
   "steps": {
     "build": {
+      "inputs": [
+        {
+          "local": true,
+          "include": ["."]
+        }
+      ],
       "commands": [
         "cd frontend && npm ci && npm run build && cd ../backend && python -m pip install --no-cache-dir -r requirements.txt"
       ]
