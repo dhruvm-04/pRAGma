@@ -4,19 +4,31 @@ import { useState, useRef } from 'react'
  * RAG - one component, three jobs:
  *   1. Upload a PDF  -> POST /ingest  (backend chunks + embeds it)
  *   2. Ask a question -> POST /query  (backend retrieves + generates)
- *   3. Show the answer WITH the retrieved chunks and a latency/cost log
+ *   3. Show the answer WITH the retrieved chunks and translation steps
  *      so you can see the "grounding" (what it actually read) in action.
  */
+
+// Query translation methods
+const TRANSLATION_METHODS = [
+  { value: 'none', label: 'Direct', detail: 'Retrieve from the question as written.', stages: ['Question', 'Retrieve', 'Generate'] },
+  { value: 'multi_query', label: 'Multi Query', detail: 'Create alternatives, then merge their evidence.', stages: ['Rewrite', 'Retrieve', 'Merge', 'Generate'] },
+  { value: 'rag_fusion', label: 'RAG Fusion', detail: 'Retrieve per variation and rank shared evidence.', stages: ['Rewrite', 'Retrieve', 'Rank', 'Generate'] },
+  { value: 'decomposition', label: 'Decomposition', detail: 'Break a complex question into smaller steps.', stages: ['Decompose', 'Retrieve', 'Synthesize'] },
+  { value: 'step_back', label: 'Step Back', detail: 'Retrieve broad context before the specific question.', stages: ['Broaden', 'Retrieve', 'Generate'] },
+  { value: 'hyde', label: 'HyDE', detail: 'Retrieve using a hypothetical answer passage.', stages: ['Hypothesize', 'Retrieve', 'Generate'] },
+]
+
 export default function App() {
-  const [source, setSource] = useState(null)        // ingested filename
-  const [ingestMsg, setIngestMsg] = useState('')    // status line under upload
-  const [messages, setMessages] = useState([])      // chat history
+  const [source, setSource] = useState(null)
+  const [ingestMsg, setIngestMsg] = useState('')
+  const [messages, setMessages] = useState([])
   const [question, setQuestion] = useState('')
   const [busy, setBusy] = useState(false)
-  const [progress, setProgress] = useState(null)   // live ingest job: {status, message, done, total}
+  const [progress, setProgress] = useState(null)
+  const [selectedMethod, setSelectedMethod] = useState('none')
   const fileRef = useRef(null)
 
-  // ---- 1. ingest (background job + polling) ----
+  //  1. ingest (background job + polling) 
   async function handleFile(e) {
     const file = e.target.files[0]
     if (!file) return
@@ -50,10 +62,11 @@ export default function App() {
     tick()
   }
 
-  // ---- 2. query ----
+  //  2. query 
   async function handleSend() {
     const q = question.trim()
     if (!q || busy) return
+    const execution = TRANSLATION_METHODS.find(method => method.value === selectedMethod)
     setMessages(prev => [...prev, { role: 'user', text: q }])
     setQuestion('')
     setBusy(true)
@@ -61,16 +74,18 @@ export default function App() {
       const res = await fetch('/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: q }),
+        body: JSON.stringify({ question: q, method: selectedMethod }),
       })
       const data = await res.json()
       setMessages(prev => [...prev, {
         role: 'assistant',
         text: data.answer,
         chunks: data.chunks || [],
+        translationSteps: data.translation_steps || [],
+        retrievalDetails: data.retrieval_details || [],
+        execution,
         latency: data.latency,
         tokens: data.tokens,
-        cost: data.cost_usd,
       }])
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', text: 'Backend unreachable — is uvicorn running?' }])
@@ -78,7 +93,7 @@ export default function App() {
     setBusy(false)
   }
 
-  // ---- 3. theme toggle ----
+  //  3. theme toggle 
   function toggleTheme() {
     const root = document.documentElement
     const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
@@ -88,9 +103,9 @@ export default function App() {
 
   return (
     <>
-      {/* ================= NAV ================= */}
+      {/*  NAV  */}
       <nav className="nav">
-        <div className="nav-logo">RAG<span className="dot">.</span></div>
+        <a className="nav-logo" href="https://dhruvmaheshwari.vercel.app/" target="_blank" rel="noreferrer">DM<span className="dot">.</span></a>
         <ul className="nav-links">
           <li><a className="nav-link" href="#ingest"><span className="num">01</span>Ingest</a></li>
           <li><a className="nav-link" href="#chat"><span className="num">02</span>Ask</a></li>
@@ -99,11 +114,11 @@ export default function App() {
         <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">☾</button>
       </nav>
 
-      {/* ================= HEADER ================= */}
+      {/*  HEADER  */}
       <section id="top">
         <div className="container">
           <div className="section-label">
-            <span className="num">00</span><span className="sep">/</span><span className="name">Ask your PDF</span>
+            <span className="num">00</span><span className="sep">/</span><span className="name">pRAGma</span>
             <span className="line"></span><span className="meta">retrieval-augmented generation</span>
           </div>
           <h1 className="home-name">Upload a PDF.<br /><span className="red">Ask it anything.</span></h1>
@@ -114,12 +129,18 @@ export default function App() {
           <div className="info-bento">
             <div className="info-cell"><div className="info-key">Pipeline</div><div className="info-val">Chunk · Embed · Retrieve · Generate</div></div>
             <div className="info-cell"><div className="info-key">Embeddings</div><div className="info-val">bge-small · local · free</div></div>
+            <div className="info-cell info-modes">
+              <div className="info-key">Execution modes</div>
+              <div className="mode-list">
+                {TRANSLATION_METHODS.map(method => <span key={method.value}>{method.label}</span>)}
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       <div className="container main-grid">
-        {/* ================= INGEST ================= */}
+        {/*  INGEST  */}
         <section id="ingest" className="panel">
           <div className="section-label">
             <span className="num">01</span><span className="sep">/</span><span className="name">Ingest a PDF</span>
@@ -148,10 +169,10 @@ export default function App() {
             </>
           )}
 
-          <p className="meta-line">{ingestMsg || 'tip: pick any company annual report — first run downloads the embed model (~130MB)'}</p>
+          <p className="meta-line">{ingestMsg || 'Upload a text-based PDF — the embedding model downloads on first use (~130MB).'}</p>
         </section>
 
-        {/* ================= CHAT ================= */}
+        {/*  CHAT  */}
         <section id="chat" className="panel">
           <div className="section-label">
             <span className="num">02</span><span className="sep">/</span><span className="name">Ask</span>
@@ -159,20 +180,86 @@ export default function App() {
           </div>
 
           <div className="chat-log" id="evidence">
-            {messages.length === 0 && <p className="empty-note">No questions yet — try "What were the main revenue drivers this year?"</p>}
+            {messages.length === 0 && <p className="empty-note">No questions yet — upload a PDF, then ask about its contents.</p>}
             {messages.map((m, i) => (
               <div key={i} className={`msg ${m.role}`}>
                 <div className="msg-label">{m.role === 'user' ? 'you' : 'rag'}</div>
                 <div className="msg-text">{m.text}</div>
 
-                {/* evidence + latency/cost log shown only on assistant answers */}
+                {m.role === 'assistant' && m.execution && (
+                  <div className="execution-trace">
+                    <div className="execution-overview">
+                      <div>
+                        <span className="b-label">execution mode</span>
+                        <strong>{m.execution.label}</strong>
+                        <p>{m.execution.detail}</p>
+                      </div>
+                      <div className="execution-stages" aria-label={`${m.execution.label} execution steps`}>
+                        {m.execution.stages.map((stage, index) => (
+                          <span key={stage} className="execution-stage"><i>{String(index + 1).padStart(2, '0')}</i>{stage}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* translation steps */}
+                {m.role === 'assistant' && m.translationSteps && m.translationSteps.length > 0 && (
+                  <div className="evidence translation-steps">
+                    {m.translationSteps.map((step, si) => (
+                      <div key={si} className="translation-step">
+                        <div className="step-header">
+                          <span className="b-label">{step.method}</span>
+                          <span className="step-count">{step.queries.length} queries</span>
+                        </div>
+                        <div className="step-queries">
+                          {step.queries.map((q, qi) => (
+                            <div key={qi} className="step-query">
+                              <span className="query-num">{qi + 1}.</span>
+                              <span className="query-text">{q}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* retrieval details */}
+                {m.role === 'assistant' && m.retrievalDetails && m.retrievalDetails.length > 0 && (
+                  <div className="evidence retrieval-details">
+                    <div className="ev-head">
+                      <span className="b-label">// retrieval per query</span>
+                    </div>
+                    <div className="retrieval-grid">
+                    {m.retrievalDetails.map((rd, ri) => (
+                      <div key={ri} className="retrieval-query">
+                        <div className="retrieval-query-head">
+                          <span className="query-num">{String(ri + 1).padStart(2, '0')}</span>
+                          <div className="retrieval-query-text">{rd.query}</div>
+                        </div>
+                        <div className="retrieval-hits">
+                          {rd.hits.map((h, hi) => (
+                            <div key={hi} className="retrieval-hit">
+                              <span className="tag">chunk #{h.index}</span>
+                              <span className="chunk-score">sim {h.score}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* evidence chunks */}
                 {m.role === 'assistant' && m.chunks && (
                   <div className="evidence">
                     <div className="ev-head">
-                      <span className="b-label">retrieved chunks</span>
+                      <span className="b-label">final retrieved chunks</span>
                       <span className="ev-meta">
                         retr {m.latency?.retrieval_ms}ms · llm {m.latency?.llm_ms}ms · total {m.latency?.total_ms}ms
-                        {' · '}{m.tokens?.input}/{m.tokens?.output} tok · ${m.cost}
+                        {' · '}{m.tokens?.input}/{m.tokens?.output} tok
                       </span>
                     </div>
                     {m.chunks.map((c, j) => (
@@ -199,6 +286,18 @@ export default function App() {
               placeholder="Ask about the document…"
               disabled={busy}
             />
+            <select
+              id="method-select"
+              value={selectedMethod}
+              onChange={e => setSelectedMethod(e.target.value)}
+              className="method-select"
+              aria-label="Execution mode"
+              disabled={busy}
+            >
+              {TRANSLATION_METHODS.map(m => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
             <button className="cta-btn primary" onClick={handleSend} disabled={busy}>Send</button>
           </div>
         </section>
