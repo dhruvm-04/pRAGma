@@ -2,6 +2,7 @@ fastapi
 uvicorn[standard]
 pypdf
 fastembed
+chromadb
 numpy
 requests
 python-dotenv
