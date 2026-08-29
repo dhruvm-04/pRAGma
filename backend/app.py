@@ -1,6 +1,7 @@
 import asyncio
 import io
 import os
+import re
 import time
 import uuid
 from pathlib import Path
@@ -95,6 +96,18 @@ def embed(text_list, on_batch=None):
     return vectors
 
 
+THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
+
+
+def strip_think(text):
+    if not text:
+        return text
+    cleaned = THINK_RE.sub("", text)
+    if "<think>" in cleaned.lower():
+        cleaned = re.split(r"<think>", cleaned, flags=re.IGNORECASE)[0]
+    return cleaned.strip()
+
+
 def call_llm(prompt):
     if not GROQ_API_KEY:
         return "API key not set in .env.", 0, 0
@@ -106,6 +119,7 @@ def call_llm(prompt):
             "model": GROQ_MODEL,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.2,
+            "reasoning_format": "hidden",
         },
         timeout=60,
     )
@@ -113,8 +127,9 @@ def call_llm(prompt):
     try:
         data = resp.json()
         usage = data.get("usage", {})
+        content = data["choices"][0]["message"]["content"]
         return (
-            data["choices"][0]["message"]["content"],
+            strip_think(content),
             usage.get("prompt_tokens", 0),
             usage.get("completion_tokens", 0),
         )
@@ -150,6 +165,11 @@ def translate_query(question, method):
         return [question]
 
     answer, _, _ = call_llm(prompt)
+
+    if method == "hyde":
+        passage = " ".join(line.strip() for line in answer.splitlines() if line.strip())
+        return [passage] if passage else [question]
+
     lines = [line.strip() for line in answer.splitlines() if line.strip()]
 
     cleaned = []
@@ -160,8 +180,6 @@ def translate_query(question, method):
 
     if method == "step_back" and cleaned:
         return [cleaned[0], question]
-    if method == "hyde" and cleaned:
-        return [cleaned[0]]
     if method == "decomposition" and cleaned:
         return cleaned[:3]
     if cleaned:
