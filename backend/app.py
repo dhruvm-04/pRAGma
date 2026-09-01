@@ -23,15 +23,15 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.6-27b")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"
-CHUNK_SIZE = 1200
-CHUNK_OVERLAP = 150
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 200
 TOP_K = 4
 
 BASE_DIR = Path(__file__).resolve().parent
 CHROMA_DIR = BASE_DIR / "chroma_db"
 FRONTEND_DIST = BASE_DIR.parent / "frontend" / "dist"
 
-app = FastAPI(title="RAG")
+app = FastAPI(title="pRAGma")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -81,7 +81,7 @@ def chunk_text(text):
 
 
 def embed(text_list, on_batch=None):
-    batch_size = 16
+    batch_size = 10
     vectors = []
     total = len(text_list)
 

@@ -57,7 +57,7 @@ export default function App() {
         setProgress(null)
         return
       }
-      setTimeout(tick, 400)
+      setTimeout(tick, 1000)
     }
     tick()
   }
