@@ -1,27 +1,153 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>pRAGma</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script>
-(function(){
-  var t = 'light';
-  try{
-    var saved = localStorage.getItem('ace-rag-theme');
-    if(saved === 'dark' || saved === 'light'){ t = saved; }
-    else if(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches){ t = 'dark'; }
-  }catch(e){}
-  document.documentElement.setAttribute('data-theme', t);
-})();
-</script>
-</head>
-<body>
-<div id="root"></div>
-<script type="module" src="/src/main.jsx"></script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Ask questions about your PDFs and inspect the evidence behind every answer."
+    />
+    <title>pRAGma — Ask your documents</title>
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <script src="/assets/theme.js"></script>
+    <script src="/assets/app.js" defer></script>
+  </head>
+  <body>
+    <nav class="nav" aria-label="Main navigation">
+      <a class="brand" href="#top">pRAGma<span>.</span></a>
+      <div class="nav-links">
+        <a href="#ingest">01 / Ingest</a><a href="#chat">02 / Ask</a
+        ><a href="#evidence">03 / Evidence</a>
+      </div>
+      <button
+        id="theme-toggle"
+        class="secondary"
+        type="button"
+        aria-label="Toggle color theme"
+      >
+        Theme
+      </button>
+    </nav>
+    <main id="top" class="container">
+      <header class="hero">
+        <p class="eyebrow"><span>00 /</span> Retrieval-augmented generation</p>
+        <h1>Upload a PDF.<br /><span>Ask it anything.</span></h1>
+        <p class="tagline">
+          Your documents. Clear answers. Evidence you can inspect.
+        </p>
+        <div class="info-grid">
+          <div>
+            <p class="eyebrow">Pipeline</p>
+            <strong>Chunk → Embed → Retrieve → Generate</strong>
+          </div>
+          <div>
+            <p class="eyebrow">RAG Fusion</p>
+            <strong>Multiple queries. One ranked evidence set.</strong>
+          </div>
+          <div>
+            <p class="eyebrow">Embeddings</p>
+            <strong>bge-small · local</strong>
+          </div>
+        </div>
+      </header>
+      <div class="workspace">
+        <section
+          id="ingest"
+          class="panel"
+          aria-labelledby="ingest-title"
+        >
+          <p class="eyebrow"><span>01 /</span> Your documents</p>
+          <h2 id="ingest-title">Start with a PDF</h2>
+          <p class="muted">
+            Upload a text-based PDF to add it to your document library.
+          </p>
+          <input
+            id="file-input"
+            type="file"
+            accept=".pdf,application/pdf"
+            hidden
+          />
+          <button id="upload-button" class="primary full" type="button">
+            Choose PDF
+          </button>
+          <progress
+            id="upload-progress"
+            max="100"
+            aria-label="Document indexing progress"
+            hidden
+          ></progress>
+          <p id="upload-status" class="status" role="status" aria-live="polite">
+            The embedding model downloads on first use.
+          </p>
+          <div class="library">
+            <p class="eyebrow">Library status</p>
+            <p id="library-status" role="status">Checking documents…</p>
+          </div>
+          <p class="small muted">
+            Questions search all indexed PDFs. Uploading the same filename
+            replaces its previous chunks.
+          </p>
+        </section>
+        <section
+          id="chat"
+          class="panel"
+          aria-labelledby="chat-title"
+        >
+          <p class="eyebrow"><span>02 /</span> Ask &amp; explore</p>
+          <h2 id="chat-title">Follow your curiosity.</h2>
+          <form id="question-form">
+            <div class="mode-row">
+              <label for="method-select">Retrieval method</label
+              ><select id="method-select" name="method">
+                <option value="none">Direct</option>
+                <option value="multi_query">Multi Query</option>
+                <option value="rag_fusion" selected>RAG Fusion</option>
+                <option value="decomposition">Decomposition</option>
+                <option value="step_back">Step Back</option>
+                <option value="hyde">HyDE</option>
+              </select>
+            </div>
+            <p id="method-description" class="small muted"></p>
+            <label for="question" class="sr-only"
+              >Question about your documents</label
+            >
+            <div class="composer">
+              <textarea
+                id="question"
+                name="question"
+                rows="2"
+                maxlength="8000"
+                placeholder="What would you like to know?"
+                required
+              ></textarea
+              ><button id="send-button" class="primary" type="submit">
+                Ask
+              </button>
+            </div>
+            <p class="small muted composer-hint">
+              Enter to send · Shift + Enter for a new line
+            </p>
+          </form>
+          <p
+            id="query-status"
+            role="status"
+            aria-live="polite"
+            class="status"
+          ></p>
+          <div
+            id="evidence"
+            class="conversation"
+            aria-label="Answers and evidence"
+          >
+            <p id="empty-state" class="empty-state">
+              Ask a question to see an answer, its sources, and how the evidence
+              was ranked.
+            </p>
+          </div>
+        </section>
+      </div>
+    </main>
+    <footer>pRAGma / Every answer comes with the evidence it used.</footer>
+  </body>
 </html>
