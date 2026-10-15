@@ -103,19 +103,6 @@ Leaving out `method` uses Direct retrieval. The browser starts with RAG Fusion s
 
 Responses also include timings and token counts. Timings separate query rewriting, retrieval, and answer generation; token counts cover all LLM calls made for the question.
 
-## Running the tests
-
-From the folder containing this README:
-
-```powershell
-.\backend\.venv\Scripts\python -m pip install httpx
-.\backend\.venv\Scripts\python -m unittest discover -s backend -v
-```
-
-The tests use synthetic embeddings and mock LLM responses, so they don't need an API key or a model download. They cover RRF scoring, query handling, API errors, and retrieval through an in-memory Chroma collection for all six methods.
-
 ## A few limitations
-
-This is a local, single-user app. All sessions share the same document collection, and upload jobs live in memory, so run one server worker.
 
 PDFs need selectable text; there's no OCR for scans. Chunking is based on character counts, which can split sentences or tables. Answers are prompted to stay within the retrieved context, but they can still be wrong. The evidence is there so you can check them.
